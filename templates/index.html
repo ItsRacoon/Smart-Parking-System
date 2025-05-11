@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Parking System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+        }
+        .parking-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .video-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container parking-container">
+        <h1 class="text-center mb-4">Smart Parking System</h1>
+        
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-success">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+        
+        <div class="action-buttons">
+            <a href="{{ url_for('book_space') }}" class="btn btn-primary btn-lg">Book a Parking Space</a>
+            <a href="{{ url_for('view_bookings') }}" class="btn btn-secondary btn-lg">View/Manage Bookings</a>
+        </div>
+        
+        <div class="video-container">
+            <h3>Live Parking Space Detection</h3>
+            <div class="card">
+                <div class="card-body">
+                    <img src="{{ url_for('video_feed') }}" class="img-fluid" alt="Live Parking Feed">
+                </div>
+                <div class="card-footer text-muted">
+                    <p>
+                        <span class="badge bg-success">Green</span>: Available for booking
+                        <span class="badge bg-warning text-dark ms-2">Orange</span>: Booked but currently empty
+                        <span class="badge bg-danger ms-2">Red</span>: Occupied
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
