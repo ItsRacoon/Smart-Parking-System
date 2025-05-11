@@ -1,0 +1,253 @@
+{% extends "layout.html" %}
+
+{% block title %}Manage Users - Admin Dashboard{% endblock %}
+
+{% block styles %}
+.admin-container {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+}
+.admin-header {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+}
+.admin-nav {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.user-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+.user-card:hover {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+.user-card .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #ddd;
+    padding: 15px;
+}
+.user-card .card-body {
+    padding: 20px;
+}
+.user-actions {
+    display: flex;
+    gap: 10px;
+}
+.admin-badge {
+    background-color: #dc3545;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    margin-left: 5px;
+}
+.search-box {
+    margin-bottom: 20px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header d-flex justify-content-between align-items-center">
+        <h1>Manage Users</h1>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+            <i class="bi bi-house-door"></i> Back to Home
+        </a>
+    </div>
+    
+    <div class="admin-nav">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">Dashboard</a>
+        <a href="{{ url_for('admin_spaces') }}" class="btn btn-outline-secondary">Manage Spaces</a>
+        <a href="{{ url_for('admin_bookings') }}" class="btn btn-outline-secondary">All Bookings</a>
+        <a href="{{ url_for('admin_users') }}" class="btn btn-primary">Manage Users</a>
+        <a href="{{ url_for('admin_reports') }}" class="btn btn-outline-secondary">Reports</a>
+    </div>
+    
+    <div class="search-box">
+        <div class="input-group">
+            <input type="text" class="form-control" id="userSearch" placeholder="Search users by name, email or username...">
+            <button class="btn btn-outline-secondary" type="button" id="searchButton">
+                <i class="bi bi-search"></i> Search
+            </button>
+        </div>
+    </div>
+    
+    <div class="row" id="usersList">
+        {% for user in users %}
+            <div class="col-md-6 user-item">
+                <div class="user-card card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            {{ user.username }}
+                            {% if user.is_admin %}
+                                <span class="admin-badge">Admin</span>
+                            {% endif %}
+                        </h5>
+                        <div class="user-actions">
+                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#userDetailsModal{{ user.id }}">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteUserModal{{ user.id }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</p>
+                        <p><strong>Email:</strong> {{ user.email }}</p>
+                        <p><strong>Joined:</strong> {{ user.created_at.strftime('%Y-%m-%d') }}</p>
+                        <p><strong>Bookings:</strong> {{ user.bookings|length }}</p>
+                    </div>
+                </div>
+                
+                <!-- User Details Modal -->
+                <div class="modal fade" id="userDetailsModal{{ user.id }}" tabindex="-1" aria-labelledby="userDetailsModalLabel{{ user.id }}" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="userDetailsModalLabel{{ user.id }}">User Details: {{ user.username }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Account Information</h6>
+                                        <p><strong>Username:</strong> {{ user.username }}</p>
+                                        <p><strong>Email:</strong> {{ user.email }}</p>
+                                        <p><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</p>
+                                        <p><strong>Phone:</strong> {{ user.phone or 'Not provided' }}</p>
+                                        <p><strong>Joined:</strong> {{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                                        <p><strong>Role:</strong> {% if user.is_admin %}Administrator{% else %}Regular User{% endif %}</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Vehicles</h6>
+                                        {% if user.vehicles %}
+                                            <ul class="list-group">
+                                                {% for vehicle in user.vehicles %}
+                                                    <li class="list-group-item">
+                                                        <strong>{{ vehicle.license_plate }}</strong>
+                                                        <br>{{ vehicle.make }} {{ vehicle.model }}, {{ vehicle.color }}
+                                                    </li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <p>No vehicles registered</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <h6 class="mt-4">Bookings</h6>
+                                {% if user.bookings %}
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Reference</th>
+                                                    <th>Space</th>
+                                                    <th>Date</th>
+                                                    <th>Status</th>
+                                                    <th>Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for booking in user.bookings %}
+                                                    <tr>
+                                                        <td>{{ booking.booking_reference }}</td>
+                                                        <td>{{ booking.parking_space.space_id }}</td>
+                                                        <td>{{ booking.start_time.strftime('%Y-%m-%d') }}</td>
+                                                        <td>
+                                                            {% if booking.is_active %}
+                                                                <span class="badge bg-success">Active</span>
+                                                            {% else %}
+                                                                <span class="badge bg-secondary">Inactive</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>${{ "%.2f"|format(booking.total_price) }}</td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% else %}
+                                    <p>No bookings found</p>
+                                {% endif %}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                {% if not user.is_admin %}
+                                    <button type="button" class="btn btn-primary">Make Admin</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Delete User Modal -->
+                <div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1" aria-labelledby="deleteUserModalLabel{{ user.id }}" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="deleteUserModalLabel{{ user.id }}">Confirm Deletion</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Are you sure you want to delete the user <strong>{{ user.username }}</strong>?</p>
+                                <p class="text-danger">This action cannot be undone. All user data, including bookings and vehicles, will be permanently deleted.</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <form action="#" method="POST">
+                                    <button type="submit" class="btn btn-danger">Delete User</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    
+    {% if not users %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No users found in the system.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Simple search functionality
+    document.getElementById('searchButton').addEventListener('click', performSearch);
+    document.getElementById('userSearch').addEventListener('keyup', function(event) {
+        if (event.key === 'Enter') {
+            performSearch();
+        }
+    });
+    
+    function performSearch() {
+        const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+        const userItems = document.querySelectorAll('.user-item');
+        
+        userItems.forEach(item => {
+            const username = item.querySelector('.card-header h5').textContent.toLowerCase();
+            const userInfo = item.querySelector('.card-body').textContent.toLowerCase();
+            
+            if (username.includes(searchTerm) || userInfo.includes(searchTerm)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

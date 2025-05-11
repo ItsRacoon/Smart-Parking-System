@@ -1,0 +1,163 @@
+{% extends "layout.html" %}
+
+{% block title %}Booking Details - Smart Parking System{% endblock %}
+
+{% block styles %}
+.details-container {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+}
+.booking-header {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+}
+.booking-info {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+.qr-code {
+    text-align: center;
+    margin: 20px 0;
+}
+.qr-code img {
+    max-width: 200px;
+    border: 1px solid #ddd;
+    padding: 10px;
+    background-color: white;
+}
+.payment-info {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+.status-badge {
+    font-size: 1rem;
+    padding: 8px 15px;
+    border-radius: 20px;
+}
+.action-buttons {
+    margin-top: 20px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="details-container">
+    <div class="booking-header d-flex justify-content-between align-items-center">
+        <h1>Booking Details</h1>
+        <div>
+            <a href="{{ url_for('view_bookings') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Bookings
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="booking-info">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h3>Booking Information</h3>
+                    <span class="status-badge badge bg-success">Confirmed</span>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Reference:</strong> {{ booking.booking_reference }}</p>
+                        <p><strong>Parking Space:</strong> {{ booking.parking_space.space_id }}</p>
+                        <p><strong>Zone:</strong> {{ booking.parking_space.zone }}</p>
+                        <p><strong>Vehicle:</strong> {{ booking.license_plate }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Start Time:</strong> {{ booking.start_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                        <p><strong>End Time:</strong> {{ booking.end_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                        <p><strong>Duration:</strong> {{ (booking.end_time - booking.start_time).total_seconds() // 3600 }} hours</p>
+                        <p><strong>Booked On:</strong> {{ booking.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="payment-info">
+                <h3>Pricing Details</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Hourly Rate:</strong> ${{ "%.2f"|format(booking.parking_space.hourly_rate) }}</p>
+                        <p><strong>Duration:</strong> {{ (booking.end_time - booking.start_time).total_seconds() // 3600 }} hours</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Total Amount:</strong> ${{ "%.2f"|format(booking.total_price) }}</p>
+                    </div>
+                </div>
+                
+                <div class="alert alert-success mt-3">
+                    <i class="bi bi-check-circle"></i> This booking is confirmed.
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                {% if booking.is_active %}
+                    <form method="POST" action="{{ url_for('cancel_booking', booking_id=booking.id) }}" onsubmit="return confirm('Are you sure you want to cancel this booking?');" class="d-inline">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-x-circle"></i> Cancel Booking
+                        </button>
+                    </form>
+                {% else %}
+                    <div class="alert alert-secondary">
+                        <i class="bi bi-info-circle"></i> This booking has been cancelled.
+                    </div>
+                {% endif %}
+                
+                <button class="btn btn-outline-dark ms-2" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Print Details
+                </button>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-qr-code"></i> Access QR Code</h5>
+                </div>
+                <div class="card-body text-center">
+                    <p>Show this QR code at the entrance to access your parking space</p>
+                    <div class="qr-code">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=SMARTPARK:{{ booking.booking_reference }}" alt="Booking QR Code">
+                    </div>
+                    <p class="mt-2"><strong>{{ booking.booking_reference }}</strong></p>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Parking Instructions</h5>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li>Arrive at the parking facility during your booked time slot.</li>
+                        <li>At the entrance, scan the QR code or enter your booking reference.</li>
+                        <li>The system will direct you to your assigned space ({{ booking.parking_space.space_id }}).</li>
+                        <li>Park your vehicle within the marked boundaries.</li>
+                        <li>To exit, drive to the exit gate and the system will recognize your vehicle.</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-question-circle"></i> Need Help?</h5>
+                </div>
+                <div class="card-body">
+                    <p>If you have any questions or need assistance, please contact our support team:</p>
+                    <p><i class="bi bi-telephone"></i> +1 (555) 123-4567</p>
+                    <p><i class="bi bi-envelope"></i> support@smartparking.com</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

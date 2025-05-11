@@ -39,13 +39,36 @@
         <div class="booking-form">
             <form method="POST" action="{{ url_for('book_space') }}">
                 <div class="mb-3">
-                    <label for="space_id" class="form-label">Select Parking Space</label>
-                    <select class="form-select" id="space_id" name="space_id" required>
-                        <option value="">-- Select an available space --</option>
-                        {% for space in spaces %}
-                            <option value="{{ space.id }}">{{ space.label }}</option>
-                        {% endfor %}
-                    </select>
+                    <label class="form-label">Parking Space Selection</label>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="selection_mode" id="auto_select" value="auto" checked>
+                        <label class="form-check-label" for="auto_select">
+                            Automatically select the best available space
+                        </label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="selection_mode" id="manual_select" value="manual">
+                        <label class="form-check-label" for="manual_select">
+                            Manually select a parking space
+                        </label>
+                    </div>
+                    
+                    <div id="manual_selection_container" style="display: none;">
+                        <select class="form-select" id="space_id" name="space_id">
+                            <option value="">-- Select an available space --</option>
+                            {% for space in spaces %}
+                                <option value="{{ space.id }}" data-zone="{{ space.zone }}" data-rate="{{ space.hourly_rate }}">
+                                    {{ space.label }} ({{ space.zone }} - ${{ space.hourly_rate }}/hr)
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div id="auto_selection_container">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> The system will automatically select the best available parking space for you.
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="mb-3">
@@ -83,5 +106,34 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Handle toggle between automatic and manual selection
+        document.addEventListener('DOMContentLoaded', function() {
+            const autoSelect = document.getElementById('auto_select');
+            const manualSelect = document.getElementById('manual_select');
+            const manualContainer = document.getElementById('manual_selection_container');
+            const autoContainer = document.getElementById('auto_selection_container');
+            const spaceIdSelect = document.getElementById('space_id');
+            
+            function updateSelectionMode() {
+                if (autoSelect.checked) {
+                    manualContainer.style.display = 'none';
+                    autoContainer.style.display = 'block';
+                    spaceIdSelect.removeAttribute('required');
+                } else {
+                    manualContainer.style.display = 'block';
+                    autoContainer.style.display = 'none';
+                    spaceIdSelect.setAttribute('required', 'required');
+                }
+            }
+            
+            // Initial setup
+            updateSelectionMode();
+            
+            // Add event listeners
+            autoSelect.addEventListener('change', updateSelectionMode);
+            manualSelect.addEventListener('change', updateSelectionMode);
+        });
+    </script>
 </body>
 </html>

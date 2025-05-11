@@ -1,70 +1,301 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Parking System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            padding: 20px;
-        }
-        .parking-container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-        .video-container {
-            margin: 20px 0;
-            text-align: center;
-        }
-        .action-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin: 20px 0;
-        }
-        .flash-messages {
-            margin-bottom: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container parking-container">
-        <h1 class="text-center mb-4">Smart Parking System</h1>
-        
-        <div class="flash-messages">
-            {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-success">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-        </div>
-        
+{% extends "layout.html" %}
+
+{% block title %}Home - Smart Parking System{% endblock %}
+
+{% block styles %}
+.hero-section {
+    background-color: #343a40;
+    color: white;
+    padding: 60px 0;
+    margin-bottom: 30px;
+    border-radius: 10px;
+}
+.video-container {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+}
+.features-section {
+    margin-bottom: 30px;
+}
+.feature-card {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 25px;
+    height: 100%;
+    transition: transform 0.3s ease;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+.feature-icon {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+    color: #0d6efd;
+}
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    margin: 30px 0;
+}
+.stats-section {
+    background-color: #f8f9fa;
+    padding: 40px 0;
+    margin: 30px 0;
+    border-radius: 10px;
+}
+.stat-item {
+    text-align: center;
+}
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #0d6efd;
+}
+.stat-label {
+    font-size: 1.1rem;
+    color: #6c757d;
+}
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+    }
+    .action-buttons .btn {
+        width: 100%;
+    }
+}
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero-section text-center">
+    <div class="container">
+        <h1 class="display-4">Welcome to Smart Parking System</h1>
+        <p class="lead">Find, book, and manage parking spaces with ease using our advanced computer vision technology</p>
         <div class="action-buttons">
-            <a href="{{ url_for('book_space') }}" class="btn btn-primary btn-lg">Book a Parking Space</a>
-            <a href="{{ url_for('view_bookings') }}" class="btn btn-secondary btn-lg">View/Manage Bookings</a>
-            <a href="{{ url_for('admin_spaces') }}" class="btn btn-outline-dark btn-lg">Admin: Manage Spaces</a>
+            <a href="{{ url_for('book_space') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-calendar-plus"></i> Book a Space
+            </a>
+            <a href="{{ url_for('view_bookings') }}" class="btn btn-outline-light btn-lg">
+                <i class="bi bi-list-check"></i> My Bookings
+            </a>
         </div>
-        
-        <div class="video-container">
-            <h3>Live Parking Space Detection</h3>
-            <div class="card">
-                <div class="card-body">
-                    <img src="{{ url_for('video_feed') }}" class="img-fluid" alt="Live Parking Feed">
+    </div>
+</div>
+
+<!-- Live Video Feed -->
+<div class="video-container">
+    <h2 class="text-center mb-4">Live Parking Status</h2>
+    <div class="card">
+        <div class="card-body">
+            <img src="{{ url_for('video_feed') }}" class="img-fluid rounded" alt="Live Parking Feed">
+        </div>
+        <div class="card-footer text-muted">
+            <p class="mb-0">
+                <span class="badge bg-success">Green</span>: Available for booking
+                <span class="badge bg-warning text-dark ms-2">Orange</span>: Booked but currently empty
+                <span class="badge bg-danger ms-2">Red</span>: Occupied
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="features-section">
+    <h2 class="text-center mb-4">Smart Features</h2>
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="feature-card">
+                <div class="text-center">
+                    <i class="bi bi-camera-video feature-icon"></i>
+                    <h4>Real-time Monitoring</h4>
                 </div>
-                <div class="card-footer text-muted">
-                    <p>
-                        <span class="badge bg-success">Green</span>: Available for booking
-                        <span class="badge bg-warning text-dark ms-2">Orange</span>: Booked but currently empty
-                        <span class="badge bg-danger ms-2">Red</span>: Occupied
-                    </p>
+                <p>Our computer vision technology monitors parking spaces in real-time, showing you exactly which spaces are available.</p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="feature-card">
+                <div class="text-center">
+                    <i class="bi bi-calendar-check feature-icon"></i>
+                    <h4>Easy Booking</h4>
+                </div>
+                <p>Book your parking space in advance with just a few clicks. Secure your spot and avoid the hassle of finding parking.</p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="feature-card">
+                <div class="text-center">
+                    <i class="bi bi-credit-card feature-icon"></i>
+                    <h4>Secure Payments</h4>
+                </div>
+                <p>Pay securely online with multiple payment options. Get instant confirmation and receipts for your bookings.</p>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="feature-card">
+                <div class="text-center">
+                    <i class="bi bi-qr-code feature-icon"></i>
+                    <h4>QR Code Access</h4>
+                </div>
+                <p>Use your unique QR code to access the parking facility. No need for physical tickets or cards.</p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="feature-card">
+                <div class="text-center">
+                    <i class="bi bi-geo-alt feature-icon"></i>
+                    <h4>Zone-based Pricing</h4>
+                </div>
+                <p>Different zones with different rates to suit your needs and budget. Choose from General, Premium, VIP, or Disabled zones.</p>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="feature-card">
+                <div class="text-center">
+                    <i class="bi bi-phone feature-icon"></i>
+                    <h4>Mobile Friendly</h4>
+                </div>
+                <p>Access all features from your mobile device. Book, manage, and pay for parking on the go.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Section -->
+<div class="stats-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-3 col-6 mb-4">
+                <div class="stat-item">
+                    <div class="stat-value" id="total-spaces">0</div>
+                    <div class="stat-label">Total Spaces</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-4">
+                <div class="stat-item">
+                    <div class="stat-value" id="available-spaces">0</div>
+                    <div class="stat-label">Available Now</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-4">
+                <div class="stat-item">
+                    <div class="stat-value" id="booked-spaces">0</div>
+                    <div class="stat-label">Booked Today</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-4">
+                <div class="stat-item">
+                    <div class="stat-value" id="happy-users">0</div>
+                    <div class="stat-label">Happy Users</div>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
+<!-- How It Works Section -->
+<div class="container">
+    <h2 class="text-center mb-4">How It Works</h2>
+    <div class="row">
+        <div class="col-md-3 text-center mb-4">
+            <div class="rounded-circle bg-primary text-white d-inline-flex justify-content-center align-items-center mb-3" style="width: 80px; height: 80px;">
+                <i class="bi bi-search fs-1"></i>
+            </div>
+            <h5>Find a Space</h5>
+            <p>Browse available parking spaces in real-time</p>
+        </div>
+        <div class="col-md-3 text-center mb-4">
+            <div class="rounded-circle bg-success text-white d-inline-flex justify-content-center align-items-center mb-3" style="width: 80px; height: 80px;">
+                <i class="bi bi-calendar-plus fs-1"></i>
+            </div>
+            <h5>Book & Pay</h5>
+            <p>Select your space, duration, and complete payment</p>
+        </div>
+        <div class="col-md-3 text-center mb-4">
+            <div class="rounded-circle bg-info text-white d-inline-flex justify-content-center align-items-center mb-3" style="width: 80px; height: 80px;">
+                <i class="bi bi-qr-code-scan fs-1"></i>
+            </div>
+            <h5>Get Access</h5>
+            <p>Receive your QR code for easy access</p>
+        </div>
+        <div class="col-md-3 text-center mb-4">
+            <div class="rounded-circle bg-warning text-dark d-inline-flex justify-content-center align-items-center mb-3" style="width: 80px; height: 80px;">
+                <i class="bi bi-p-square fs-1"></i>
+            </div>
+            <h5>Park & Go</h5>
+            <p>Park in your reserved space and enjoy your day</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Fetch space data and update stats
+    function updateStats() {
+        fetch('/spaces')
+            .then(response => response.json())
+            .then(data => {
+                const totalSpaces = Object.keys(data).length;
+                let availableSpaces = 0;
+                let bookedSpaces = 0;
+                
+                for (const key in data) {
+                    if (data[key].is_available) {
+                        availableSpaces++;
+                    }
+                    if (data[key].is_booked) {
+                        bookedSpaces++;
+                    }
+                }
+                
+                // Animate counting up
+                animateValue('total-spaces', 0, totalSpaces, 1000);
+                animateValue('available-spaces', 0, availableSpaces, 1000);
+                animateValue('booked-spaces', 0, bookedSpaces, 1000);
+                animateValue('happy-users', 0, 500 + Math.floor(Math.random() * 500), 1500); // Random number for demo
+            })
+            .catch(error => console.error('Error fetching space data:', error));
+    }
     
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    // Animation function for counting up
+    function animateValue(id, start, end, duration) {
+        const obj = document.getElementById(id);
+        const range = end - start;
+        const minTimer = 50;
+        let stepTime = Math.abs(Math.floor(duration / range));
+        stepTime = Math.max(stepTime, minTimer);
+        
+        let startTime = new Date().getTime();
+        let endTime = startTime + duration;
+        let timer;
+        
+        function run() {
+            let now = new Date().getTime();
+            let remaining = Math.max((endTime - now) / duration, 0);
+            let value = Math.round(end - (remaining * range));
+            obj.innerHTML = value;
+            if (value == end) {
+                clearInterval(timer);
+            }
+        }
+        
+        timer = setInterval(run, stepTime);
+        run();
+    }
+    
+    // Update stats when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(updateStats, 1000); // Delay to ensure video feed is loading
+    });
+</script>
+{% endblock %}

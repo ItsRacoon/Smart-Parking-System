@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+
+{% block title %}Page Not Found - Smart Parking System{% endblock %}
+
+{% block styles %}
+.error-container {
+    text-align: center;
+    padding: 50px 0;
+}
+.error-code {
+    font-size: 8rem;
+    font-weight: bold;
+    color: #dc3545;
+    margin-bottom: 20px;
+}
+.error-message {
+    font-size: 2rem;
+    margin-bottom: 30px;
+}
+.error-description {
+    font-size: 1.2rem;
+    color: #6c757d;
+    margin-bottom: 30px;
+}
+.error-image {
+    max-width: 300px;
+    margin: 30px 0;
+}
+{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-code">404</div>
+    <div class="error-message">Page Not Found</div>
+    <div class="error-description">
+        The page you are looking for might have been removed, had its name changed,<br>
+        or is temporarily unavailable.
+    </div>
+    
+    <img src="{{ url_for('static', filename='images/404.svg') }}" alt="404 Error" class="error-image">
+    
+    <div class="mt-4">
+        <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
+            <i class="bi bi-house-door"></i> Go to Homepage
+        </a>
+    </div>
+</div>
+{% endblock %}
