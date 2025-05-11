@@ -198,5 +198,22 @@ def cancel_booking(booking_id):
     flash('Booking cancelled successfully')
     return redirect(url_for('view_bookings'))
 
+@app.route('/admin/spaces', methods=['GET'])
+def admin_spaces():
+    """Admin page to view and manage parking spaces"""
+    spaces = ParkingSpace.query.all()
+    return render_template('admin_spaces.html', spaces=spaces)
+
+@app.route('/admin/run-picker', methods=['POST'])
+def run_space_picker():
+    """Run the parking space picker tool"""
+    import subprocess
+    try:
+        subprocess.Popen(['python', 'parkingspacepicker.py'])
+        flash('Parking space picker launched. Please check your desktop for the application window.')
+    except Exception as e:
+        flash(f'Error launching parking space picker: {str(e)}', 'error')
+    return redirect(url_for('admin_spaces'))
+
 if __name__ == '__main__':
     app.run(debug=True)
