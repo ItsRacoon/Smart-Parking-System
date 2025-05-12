@@ -86,11 +86,11 @@
                 <h3>Pricing Details</h3>
                 <div class="row">
                     <div class="col-md-6">
-                        <p><strong>Hourly Rate:</strong> ${{ "%.2f"|format(booking.parking_space.hourly_rate) }}</p>
+                        <p><strong>Hourly Rate:</strong> ₹{{ "%.2f"|format(booking.parking_space.hourly_rate) }}</p>
                         <p><strong>Duration:</strong> {{ (booking.end_time - booking.start_time).total_seconds() // 3600 }} hours</p>
                     </div>
                     <div class="col-md-6">
-                        <p><strong>Total Amount:</strong> ${{ "%.2f"|format(booking.total_price) }}</p>
+                        <p><strong>Total Amount:</strong> {{ booking.total_price|currency }}</p>
                     </div>
                 </div>
                 

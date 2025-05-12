@@ -57,11 +57,53 @@
                         <select class="form-select" id="space_id" name="space_id">
                             <option value="">-- Select an available space --</option>
                             {% for space in spaces %}
-                                <option value="{{ space.id }}" data-zone="{{ space.zone }}" data-rate="{{ space.hourly_rate }}">
-                                    {{ space.label }} ({{ space.zone }} - ${{ space.hourly_rate }}/hr)
+                                {% set hourly_rate = space.hourly_rate|float %}
+                                {% if hourly_rate < 10 %}
+                                    {% set hourly_rate = hourly_rate * 75 %}
+                                {% endif %}
+                                <option value="{{ space.id }}" data-zone="{{ space.zone }}" data-rate="{{ hourly_rate }}">
+                                    {{ space.label }} ({{ space.zone }} - ₹{{ hourly_rate|round(2) }}/hr)
                                 </option>
                             {% endfor %}
                         </select>
+                    </div>
+                    
+                    <!-- Add pricing information section -->
+                    <div class="mt-4">
+                        <h5>Pricing Information</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Zone</th>
+                                        <th>Hourly Rate</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>General</td>
+                                        <td>₹150.00</td>
+                                        <td>Standard parking spaces</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Premium</td>
+                                        <td>₹250.00</td>
+                                        <td>Larger spaces with better access</td>
+                                    </tr>
+                                    <tr>
+                                        <td>VIP</td>
+                                        <td>₹350.00</td>
+                                        <td>Premium spaces near entrances</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Disabled</td>
+                                        <td>₹100.00</td>
+                                        <td>Accessible spaces (permit required)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     
                     <div id="auto_selection_container">
@@ -97,6 +139,14 @@
                     </select>
                 </div>
                 
+                <!-- Price estimate -->
+                <div class="mb-3 p-3 bg-light rounded">
+                    <h5>Price Estimate</h5>
+                    <div id="price-estimate">
+                        <p>Select a space and duration to see the estimated price.</p>
+                    </div>
+                </div>
+                
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-primary">Book Now</button>
                     <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
@@ -114,17 +164,89 @@
             const manualContainer = document.getElementById('manual_selection_container');
             const autoContainer = document.getElementById('auto_selection_container');
             const spaceIdSelect = document.getElementById('space_id');
+            const durationSelect = document.getElementById('duration');
+            const priceEstimateDiv = document.getElementById('price-estimate');
             
             function updateSelectionMode() {
                 if (autoSelect.checked) {
                     manualContainer.style.display = 'none';
                     autoContainer.style.display = 'block';
                     spaceIdSelect.removeAttribute('required');
+                    
+                    // Show average price estimate for auto selection
+                    updatePriceEstimateForAuto();
                 } else {
                     manualContainer.style.display = 'block';
                     autoContainer.style.display = 'none';
                     spaceIdSelect.setAttribute('required', 'required');
+                    
+                    // Update price estimate based on selected space
+                    updatePriceEstimate();
                 }
+            }
+            
+            function updatePriceEstimate() {
+                const selectedOption = spaceIdSelect.options[spaceIdSelect.selectedIndex];
+                const duration = parseInt(durationSelect.value);
+                
+                if (selectedOption && selectedOption.value) {
+                    let rate = parseFloat(selectedOption.getAttribute('data-rate'));
+                    const zone = selectedOption.getAttribute('data-zone');
+                    
+                    // Ensure rate is in INR
+                    if (rate < 10) {
+                        rate = rate * 75; // Convert from USD to INR if needed
+                    }
+                    
+                    // Set rates based on zone if the data-rate seems incorrect
+                    if (zone === 'General' && rate < 100) {
+                        rate = 150.00;
+                    } else if (zone === 'Premium' && rate < 200) {
+                        rate = 250.00;
+                    } else if (zone === 'VIP' && rate < 300) {
+                        rate = 350.00;
+                    } else if (zone === 'Disabled' && rate < 50) {
+                        rate = 100.00;
+                    }
+                    
+                    const totalPrice = rate * duration;
+                    
+                    priceEstimateDiv.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Zone:</strong> ${zone}</p>
+                                <p><strong>Hourly Rate:</strong> ₹${rate.toFixed(2)}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Duration:</strong> ${duration} hour${duration > 1 ? 's' : ''}</p>
+                                <p><strong>Total Price:</strong> <span class="fs-5 fw-bold text-primary">₹${totalPrice.toFixed(2)}</span></p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    priceEstimateDiv.innerHTML = '<p>Select a space to see the estimated price.</p>';
+                }
+            }
+            
+            function updatePriceEstimateForAuto() {
+                const duration = parseInt(durationSelect.value);
+                // Use General zone rate for auto selection estimate
+                const rate = 150.00; // INR rate for General zone
+                const totalPrice = rate * duration;
+                
+                priceEstimateDiv.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Zone:</strong> Auto-selected (General)</p>
+                            <p><strong>Hourly Rate:</strong> ₹${rate.toFixed(2)}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Duration:</strong> ${duration} hour${duration > 1 ? 's' : ''}</p>
+                            <p><strong>Total Price:</strong> <span class="fs-5 fw-bold text-primary">₹${totalPrice.toFixed(2)}</span></p>
+                        </div>
+                    </div>
+                    <p class="text-muted small">Note: Actual price may vary based on the automatically selected space.</p>
+                `;
             }
             
             // Initial setup
@@ -133,6 +255,14 @@
             // Add event listeners
             autoSelect.addEventListener('change', updateSelectionMode);
             manualSelect.addEventListener('change', updateSelectionMode);
+            spaceIdSelect.addEventListener('change', updatePriceEstimate);
+            durationSelect.addEventListener('change', function() {
+                if (autoSelect.checked) {
+                    updatePriceEstimateForAuto();
+                } else {
+                    updatePriceEstimate();
+                }
+            });
         });
     </script>
 </body>

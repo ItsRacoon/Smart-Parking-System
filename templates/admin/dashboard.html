@@ -1,0 +1,260 @@
+{% extends "layout.html" %}
+
+{% block title %}Admin Dashboard - Smart Parking System{% endblock %}
+
+{% block styles %}
+.admin-container {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+}
+.admin-header {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+}
+.admin-nav {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.stats-card {
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    color: white;
+    transition: all 0.3s ease;
+}
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+.stats-card h3 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+.stats-card p {
+    margin-bottom: 0;
+    opacity: 0.8;
+}
+.stats-card.blue {
+    background: linear-gradient(45deg, #4e73df, #224abe);
+}
+.stats-card.green {
+    background: linear-gradient(45deg, #1cc88a, #13855c);
+}
+.stats-card.yellow {
+    background: linear-gradient(45deg, #f6c23e, #dda20a);
+}
+.stats-card.red {
+    background: linear-gradient(45deg, #e74a3b, #be2617);
+}
+.stats-icon {
+    font-size: 2.5rem;
+    opacity: 0.4;
+    position: absolute;
+    right: 20px;
+    top: 20px;
+}
+.recent-bookings {
+    margin-top: 30px;
+}
+.chart-container {
+    height: 300px;
+    margin-bottom: 30px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header d-flex justify-content-between align-items-center">
+        <h1>Admin Dashboard</h1>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+            <i class="bi bi-house-door"></i> Back to Home
+        </a>
+    </div>
+    
+    <div class="admin-nav">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">Dashboard</a>
+        <a href="{{ url_for('admin_spaces') }}" class="btn btn-outline-secondary">Manage Spaces</a>
+        <a href="{{ url_for('admin_bookings') }}" class="btn btn-outline-secondary">All Bookings</a>
+        <a href="{{ url_for('admin_users') }}" class="btn btn-outline-secondary">Manage Users</a>
+        <a href="{{ url_for('admin_reports') }}" class="btn btn-outline-secondary">Reports</a>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card blue position-relative">
+                <i class="bi bi-p-square stats-icon"></i>
+                <h3>{{ total_spaces }}</h3>
+                <p>Total Parking Spaces</p>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card green position-relative">
+                <i class="bi bi-calendar-check stats-icon"></i>
+                <h3>{{ active_bookings }}</h3>
+                <p>Active Bookings</p>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card yellow position-relative">
+                <i class="bi bi-people stats-icon"></i>
+                <h3>{{ total_users }}</h3>
+                <p>Registered Users</p>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card red position-relative">
+                <i class="bi bi-currency-rupee stats-icon"></i>
+                <h3>{{ total_revenue|currency }}</h3>
+                <p>Total Revenue</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="row mt-4">
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Space Utilization by Zone</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="zoneChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Bookings by Day</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="bookingsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Bookings -->
+    <div class="recent-bookings">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Recent Bookings</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Reference</th>
+                                <th>User</th>
+                                <th>Space</th>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in recent_bookings %}
+                                <tr>
+                                    <td>{{ booking.booking_reference }}</td>
+                                    <td>{{ booking.user.username if booking.user else 'Guest' }}</td>
+                                    <td>{{ booking.parking_space.space_id }}</td>
+                                    <td>{{ booking.start_time|format_datetime }}</td>
+                                    <td>{{ booking.end_time|format_datetime }}</td>
+                                    <td>{{ booking.total_price|currency }}</td>
+                                    <td>
+                                        {% if booking.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if not recent_bookings %}
+                    <div class="alert alert-info">No recent bookings found.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Zone utilization chart
+        const zoneCtx = document.getElementById('zoneChart').getContext('2d');
+        const zoneChart = new Chart(zoneCtx, {
+            type: 'pie',
+            data: {
+                labels: [{% for zone in space_by_zone %}'{{ zone[0] }}',{% endfor %}],
+                datasets: [{
+                    data: [{% for zone in space_by_zone %}{{ zone[1] }},{% endfor %}],
+                    backgroundColor: [
+                        'rgba(78, 115, 223, 0.8)',
+                        'rgba(28, 200, 138, 0.8)',
+                        'rgba(246, 194, 62, 0.8)',
+                        'rgba(231, 74, 59, 0.8)',
+                        'rgba(54, 185, 204, 0.8)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    }
+                }
+            }
+        });
+        
+        // Bookings by day chart (dummy data for now)
+        const bookingsCtx = document.getElementById('bookingsChart').getContext('2d');
+        const bookingsChart = new Chart(bookingsCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                datasets: [{
+                    label: 'Bookings',
+                    data: [12, 19, 15, 8, 22, 30, 25],
+                    backgroundColor: 'rgba(28, 200, 138, 0.6)',
+                    borderColor: 'rgba(28, 200, 138, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

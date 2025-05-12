@@ -24,14 +24,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, 5000);
     
-    // Format currency inputs
+    // Format currency inputs (in INR)
     const currencyInputs = document.querySelectorAll('.currency-input');
     currencyInputs.forEach(function(input) {
         input.addEventListener('input', function(e) {
             let value = e.target.value.replace(/[^\d.]/g, '');
             if (value) {
+                // Format as INR with 2 decimal places
                 value = parseFloat(value).toFixed(2);
                 e.target.value = value;
+                
+                // Add a data attribute with the equivalent USD value for backend processing
+                const usdValue = (parseFloat(value) / 75).toFixed(2);
+                e.target.dataset.usdValue = usdValue;
             }
         });
     });
@@ -170,12 +175,14 @@ function calculatePrice(hourlyRate, duration) {
 }
 
 /**
- * Format a number as currency
- * @param {number} value - The value to format
- * @returns {string} - The formatted currency string
+ * Format a number as currency in Indian Rupees (INR)
+ * @param {number} value - The value to format in USD
+ * @returns {string} - The formatted currency string in INR
  */
 function formatCurrency(value) {
-    return '$' + parseFloat(value).toFixed(2);
+    // Convert USD to INR (approximate exchange rate: 1 USD = 75 INR)
+    const inrValue = parseFloat(value) * 75;
+    return '₹' + inrValue.toFixed(2);
 }
 
 /**

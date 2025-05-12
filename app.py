@@ -14,7 +14,7 @@ from models import User
 from models import Vehicle
 from models import Payment
 from models import ParkingEvent
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 
 app = Flask(__name__)
@@ -56,10 +56,12 @@ def format_datetime(value, format='%Y-%m-%d %H:%M'):
 
 @app.template_filter('currency')
 def currency_format(value):
-    """Format a number as currency."""
+    """Format a number as currency in Indian Rupees (INR)."""
     if value is None:
-        return "$0.00"
-    return "${:,.2f}".format(value)
+        return "₹0.00"
+    # Convert USD to INR (approximate exchange rate: 1 USD = 75 INR)
+    inr_value = float(value) * 75
+    return "₹{:,.2f}".format(inr_value)
 
 @app.template_filter('time_ago')
 def time_ago(value):
@@ -110,9 +112,9 @@ with app.app_context():
             with open('CarParkPos', 'rb') as f:
                 posList = pickle.load(f)
             
-            # Create different zones with different rates
+            # Create different zones with different rates (in INR)
             zones = ['General', 'Premium', 'VIP', 'Disabled']
-            rates = [2.00, 3.50, 5.00, 1.50]  # Hourly rates
+            rates = [150.00, 250.00, 350.00, 100.00]  # Hourly rates in INR
             
             for i, pos in enumerate(posList):
                 x, y = pos
@@ -246,6 +248,45 @@ def generate_frames():
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Handle user login"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        # For demo purposes, use hardcoded admin credentials
+        if username == 'admin' and password == 'admin123':
+            session['user_id'] = 1
+            session['username'] = username
+            session['is_admin'] = True
+            flash('Login successful!', 'success')
+            return redirect(url_for('admin_dashboard'))
+        
+        # Check database for user
+        user = User.query.filter_by(username=username).first()
+        if user and check_password_hash(user.password_hash, password):
+            session['user_id'] = user.id
+            session['username'] = user.username
+            session['is_admin'] = user.is_admin
+            flash('Login successful!', 'success')
+            if user.is_admin:
+                return redirect(url_for('admin_dashboard'))
+            else:
+                return redirect(url_for('index'))
+        
+        flash('Invalid username or password', 'danger')
+        return redirect(url_for('login'))
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Handle user logout"""
+    session.clear()
+    flash('You have been logged out', 'info')
+    return redirect(url_for('index'))
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -281,7 +322,7 @@ def book_space():
                 if status.get('is_available', False):
                     space_id = status['id']
                     zone = status.get('zone', 'General')
-                    hourly_rate = status.get('hourly_rate', 2.00)
+                    hourly_rate = status.get('hourly_rate', 150.00)  # Default rate in INR
                     available_spaces.append({
                         'id': space_id,
                         'zone': zone,
@@ -370,7 +411,7 @@ def book_space():
                 'id': status['id'],
                 'label': f"P{idx+1:03d}",
                 'zone': status.get('zone', 'General'),
-                'hourly_rate': status.get('hourly_rate', 2.00)
+                'hourly_rate': status.get('hourly_rate', 150.00)  # Default rate in INR
             })
     
     # Get user info if logged in

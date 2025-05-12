@@ -38,7 +38,7 @@ class ParkingSpace(db.Model):
     position_y = db.Column(db.Integer, nullable=False)
     space_id = db.Column(db.String(10), unique=True, nullable=False)
     zone = db.Column(db.String(20), default='General')  # e.g., 'VIP', 'Disabled', 'General'
-    hourly_rate = db.Column(db.Float, default=2.00)  # Default hourly rate
+    hourly_rate = db.Column(db.Float, default=150.00)  # Default hourly rate in INR (equivalent to ~$2.00)
     is_active = db.Column(db.Boolean, default=True)
     bookings = db.relationship('Booking', backref='parking_space', lazy=True)
     
