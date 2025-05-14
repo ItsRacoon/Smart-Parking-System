@@ -1,0 +1,297 @@
+{% extends "layout.html" %}
+
+{% block title %}My Profile - Smart Parking System{% endblock %}
+
+{% block styles %}
+.profile-container {
+    max-width: 800px;
+    margin: 50px auto;
+    padding: 30px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+.profile-header {
+    margin-bottom: 30px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 20px;
+}
+.profile-section {
+    margin-bottom: 30px;
+}
+.vehicle-card {
+    border-radius: 10px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+.vehicle-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+.add-vehicle-btn {
+    margin-top: 20px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header d-flex justify-content-between align-items-center">
+        <h1>My Profile</h1>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+            <i class="bi bi-house-door"></i> Back to Home
+        </a>
+    </div>
+    
+    <div class="profile-section">
+        <h3>Account Information</h3>
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Username:</strong> {{ user.username }}</p>
+                        <p><strong>Email:</strong> {{ user.email }}</p>
+                        <p><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Phone:</strong> {{ user.phone }}</p>
+                        <p><strong>Member Since:</strong> {{ user.created_at|format_date }}</p>
+                        <p><strong>Account Type:</strong> {% if user.is_admin %}Administrator{% else %}Regular User{% endif %}</p>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                        <i class="bi bi-pencil"></i> Edit Profile
+                    </button>
+                    <button class="btn btn-outline-secondary ms-2" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                        <i class="bi bi-key"></i> Change Password
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="profile-section">
+        <h3>My Vehicles</h3>
+        {% if vehicles %}
+            <div class="row">
+                {% for vehicle in vehicles %}
+                    <div class="col-md-6">
+                        <div class="card vehicle-card">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ vehicle.license_plate }}</h5>
+                                <p class="card-text">
+                                    <strong>Make:</strong> {{ vehicle.make }}<br>
+                                    <strong>Model:</strong> {{ vehicle.model }}<br>
+                                    <strong>Color:</strong> {{ vehicle.color }}
+                                </p>
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editVehicleModal{{ vehicle.id }}">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteVehicleModal{{ vehicle.id }}">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Edit Vehicle Modal -->
+                    <div class="modal fade" id="editVehicleModal{{ vehicle.id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Edit Vehicle</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <form action="{{ url_for('edit_vehicle', vehicle_id=vehicle.id) }}" method="POST">
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label for="license_plate{{ vehicle.id }}" class="form-label">License Plate</label>
+                                            <input type="text" class="form-control" id="license_plate{{ vehicle.id }}" name="license_plate" value="{{ vehicle.license_plate }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="make{{ vehicle.id }}" class="form-label">Make</label>
+                                            <input type="text" class="form-control" id="make{{ vehicle.id }}" name="make" value="{{ vehicle.make }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="model{{ vehicle.id }}" class="form-label">Model</label>
+                                            <input type="text" class="form-control" id="model{{ vehicle.id }}" name="model" value="{{ vehicle.model }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="color{{ vehicle.id }}" class="form-label">Color</label>
+                                            <input type="text" class="form-control" id="color{{ vehicle.id }}" name="color" value="{{ vehicle.color }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Delete Vehicle Modal -->
+                    <div class="modal fade" id="deleteVehicleModal{{ vehicle.id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Delete Vehicle</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Are you sure you want to delete the vehicle with license plate <strong>{{ vehicle.license_plate }}</strong>?</p>
+                                    <p class="text-danger">This action cannot be undone.</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <form action="{{ url_for('delete_vehicle', vehicle_id=vehicle.id) }}" method="POST">
+                                        <button type="submit" class="btn btn-danger">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> You haven't added any vehicles yet.
+            </div>
+        {% endif %}
+        
+        <div class="add-vehicle-btn">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addVehicleModal">
+                <i class="bi bi-plus-circle"></i> Add New Vehicle
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Vehicle Modal -->
+<div class="modal fade" id="addVehicleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Vehicle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('add_vehicle') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="license_plate" class="form-label">License Plate</label>
+                        <input type="text" class="form-control" id="license_plate" name="license_plate" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="make" class="form-label">Make</label>
+                        <input type="text" class="form-control" id="make" name="make" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="model" class="form-label">Model</label>
+                        <input type="text" class="form-control" id="model" name="model" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="color" class="form-label">Color</label>
+                        <input type="text" class="form-control" id="color" name="color" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Vehicle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('update_profile') }}" method="POST">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Phone</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" value="{{ user.phone }}" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Change Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('change_password') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="current_password" class="form-label">Current Password</label>
+                        <input type="password" class="form-control" id="current_password" name="current_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_password" class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Confirm New Password</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Password confirmation validation
+        const changePasswordForm = document.querySelector('#changePasswordModal form');
+        const newPassword = document.getElementById('new_password');
+        const confirmPassword = document.getElementById('confirm_password');
+        
+        changePasswordForm.addEventListener('submit', function(event) {
+            if (newPassword.value !== confirmPassword.value) {
+                event.preventDefault();
+                alert('New passwords do not match!');
+            }
+        });
+    });
+</script>
+{% endblock %}

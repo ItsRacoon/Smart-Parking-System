@@ -6,6 +6,7 @@ import cvzone
 import numpy as np
 import os
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 # Import database and models
 from models import db
 from models import ParkingSpace
@@ -17,11 +18,28 @@ from models import ParkingEvent
 from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 
+# Load environment variables from .env file
+load_dotenv()
+
 app = Flask(__name__)
+
+# Define now() function for templates
+@app.template_filter('now')
+def now():
+    """Return current datetime for use in templates"""
+    return datetime.now()
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///parking.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
+
+# Update database schema if needed
+try:
+    from update_db import update_payment_table
+    with app.app_context():
+        update_payment_table()
+except Exception as e:
+    print(f"Warning: Could not update database schema: {str(e)}")
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 
 # Add custom Jinja2 extensions
@@ -94,12 +112,44 @@ try:
 except ImportError:
     print("Warning: Could not import auth blueprint")
 
-# Payment module removed
-# try:
-#     from payment import payment
-#     app.register_blueprint(payment, url_prefix='/payment')
-# except ImportError:
-#     print("Warning: Could not import payment blueprint")
+# Register payment blueprint
+try:
+    from payment import payment
+    app.register_blueprint(payment, url_prefix='/payment')
+except ImportError:
+    print("Warning: Could not import payment blueprint")
+
+# Function to check for expired bookings
+def check_expired_bookings():
+    """Check for expired bookings and mark them as inactive"""
+    with app.app_context():
+        current_time = datetime.now()
+        expired_bookings = Booking.query.filter(
+            Booking.is_active == True,
+            Booking.end_time < current_time
+        ).all()
+        
+        if expired_bookings:
+            for booking in expired_bookings:
+                booking.is_active = False
+                db.session.add(booking)
+            
+            db.session.commit()
+            print(f"[{current_time}] Marked {len(expired_bookings)} expired bookings as inactive")
+
+# Create a background thread to check for expired bookings every minute
+import threading
+import time
+
+def booking_expiration_checker():
+    """Background thread to check for expired bookings"""
+    while True:
+        check_expired_bookings()
+        time.sleep(60)  # Check every minute
+
+# Start the background thread
+expiration_thread = threading.Thread(target=booking_expiration_checker, daemon=True)
+expiration_thread.start()
 
 # Create database tables
 with app.app_context():
@@ -167,9 +217,28 @@ def checkParkingSpace(imgPro, img):
     spaceCounter = 0
     free_spaces = []
     
-    # Get all active bookings
+    # Get all active bookings and check for expired bookings
     with app.app_context():
-        active_bookings = Booking.query.filter_by(is_active=True).all()
+        # Get current time
+        current_time = datetime.now()
+        
+        # Check for expired bookings and mark them as inactive
+        expired_bookings = Booking.query.filter(
+            Booking.is_active == True,
+            Booking.end_time < current_time
+        ).all()
+        
+        # Mark expired bookings as inactive
+        for booking in expired_bookings:
+            booking.is_active = False
+            db.session.add(booking)
+        
+        if expired_bookings:
+            db.session.commit()
+            print(f"Marked {len(expired_bookings)} expired bookings as inactive")
+        
+        # Get updated active bookings (only consider paid bookings as active)
+        active_bookings = Booking.query.filter_by(is_active=True, payment_status='Paid').all()
         booked_spaces = [booking.parking_space_id for booking in active_bookings]
         all_spaces = ParkingSpace.query.all()
         space_mapping = {(space.position_x, space.position_y): space.id for space in all_spaces}
@@ -209,7 +278,7 @@ def checkParkingSpace(imgPro, img):
             spaceCounter += 1
             free_spaces.append(i)
         elif is_empty and is_booked:
-            color = (255, 165, 0)  # Orange for booked but empty
+            color = (255, 0, 0)  # Blue for booked but empty (BGR format in OpenCV)
             thickness = 5
         else:
             color = (0, 0, 255)  # Red for occupied
@@ -247,6 +316,57 @@ def generate_frames():
         frame = buffer.tobytes()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """Handle user registration"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        phone = request.form.get('phone')
+        
+        # Validate input
+        if not all([username, email, password, confirm_password, first_name, last_name, phone]):
+            flash('All fields are required', 'danger')
+            return redirect(url_for('register'))
+        
+        if password != confirm_password:
+            flash('Passwords do not match', 'danger')
+            return redirect(url_for('register'))
+        
+        # Check if username or email already exists
+        existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
+        if existing_user:
+            flash('Username or email already exists', 'danger')
+            return redirect(url_for('register'))
+        
+        # Create new user
+        new_user = User(
+            username=username,
+            email=email,
+            password_hash=generate_password_hash(password),
+            first_name=first_name,
+            last_name=last_name,
+            phone=phone,
+            is_admin=False
+        )
+        
+        db.session.add(new_user)
+        db.session.commit()
+        
+        # Log in the new user
+        session['user_id'] = new_user.id
+        session['username'] = new_user.username
+        session['is_admin'] = new_user.is_admin
+        
+        flash('Registration successful! You are now logged in.', 'success')
+        return redirect(url_for('index'))
+    
+    return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -287,6 +407,180 @@ def logout():
     flash('You have been logged out', 'info')
     return redirect(url_for('index'))
 
+@app.route('/profile')
+def profile():
+    """User profile page"""
+    if 'user_id' not in session:
+        flash('Please login to view your profile', 'warning')
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    if not user:
+        flash('User not found', 'danger')
+        return redirect(url_for('index'))
+    
+    vehicles = Vehicle.query.filter_by(user_id=user.id).all()
+    
+    return render_template('profile.html', user=user, vehicles=vehicles)
+
+@app.route('/profile/update', methods=['POST'])
+def update_profile():
+    """Update user profile information"""
+    if 'user_id' not in session:
+        flash('Please login to update your profile', 'warning')
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    if not user:
+        flash('User not found', 'danger')
+        return redirect(url_for('index'))
+    
+    # Update user information
+    user.first_name = request.form.get('first_name')
+    user.last_name = request.form.get('last_name')
+    user.email = request.form.get('email')
+    user.phone = request.form.get('phone')
+    
+    db.session.commit()
+    flash('Profile updated successfully', 'success')
+    return redirect(url_for('profile'))
+
+@app.route('/profile/password', methods=['POST'])
+def change_password():
+    """Change user password"""
+    if 'user_id' not in session:
+        flash('Please login to change your password', 'warning')
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    if not user:
+        flash('User not found', 'danger')
+        return redirect(url_for('index'))
+    
+    current_password = request.form.get('current_password')
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+    
+    # Validate input
+    if not all([current_password, new_password, confirm_password]):
+        flash('All fields are required', 'danger')
+        return redirect(url_for('profile'))
+    
+    if new_password != confirm_password:
+        flash('New passwords do not match', 'danger')
+        return redirect(url_for('profile'))
+    
+    # Check current password
+    if not check_password_hash(user.password_hash, current_password):
+        flash('Current password is incorrect', 'danger')
+        return redirect(url_for('profile'))
+    
+    # Update password
+    user.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+    
+    flash('Password changed successfully', 'success')
+    return redirect(url_for('profile'))
+
+@app.route('/vehicles/add', methods=['POST'])
+def add_vehicle():
+    """Add a new vehicle to user account"""
+    if 'user_id' not in session:
+        flash('Please login to add a vehicle', 'warning')
+        return redirect(url_for('login'))
+    
+    license_plate = request.form.get('license_plate')
+    make = request.form.get('make')
+    model = request.form.get('model')
+    color = request.form.get('color')
+    
+    # Validate input
+    if not all([license_plate, make, model, color]):
+        flash('All fields are required', 'danger')
+        return redirect(url_for('profile'))
+    
+    # Check if vehicle already exists
+    existing_vehicle = Vehicle.query.filter_by(user_id=session['user_id'], license_plate=license_plate).first()
+    if existing_vehicle:
+        flash('A vehicle with this license plate already exists in your account', 'danger')
+        return redirect(url_for('profile'))
+    
+    # Create new vehicle
+    new_vehicle = Vehicle(
+        license_plate=license_plate,
+        make=make,
+        model=model,
+        color=color,
+        user_id=session['user_id']
+    )
+    
+    db.session.add(new_vehicle)
+    db.session.commit()
+    
+    flash('Vehicle added successfully', 'success')
+    return redirect(url_for('profile'))
+
+@app.route('/vehicles/<int:vehicle_id>/edit', methods=['POST'])
+def edit_vehicle(vehicle_id):
+    """Edit an existing vehicle"""
+    if 'user_id' not in session:
+        flash('Please login to edit a vehicle', 'warning')
+        return redirect(url_for('login'))
+    
+    vehicle = Vehicle.query.get_or_404(vehicle_id)
+    
+    # Check if user owns this vehicle
+    if vehicle.user_id != session['user_id']:
+        flash('You do not have permission to edit this vehicle', 'danger')
+        return redirect(url_for('profile'))
+    
+    license_plate = request.form.get('license_plate')
+    make = request.form.get('make')
+    model = request.form.get('model')
+    color = request.form.get('color')
+    
+    # Validate input
+    if not all([license_plate, make, model, color]):
+        flash('All fields are required', 'danger')
+        return redirect(url_for('profile'))
+    
+    # Update vehicle
+    vehicle.license_plate = license_plate
+    vehicle.make = make
+    vehicle.model = model
+    vehicle.color = color
+    
+    db.session.commit()
+    
+    flash('Vehicle updated successfully', 'success')
+    return redirect(url_for('profile'))
+
+@app.route('/vehicles/<int:vehicle_id>/delete', methods=['POST'])
+def delete_vehicle(vehicle_id):
+    """Delete a vehicle"""
+    if 'user_id' not in session:
+        flash('Please login to delete a vehicle', 'warning')
+        return redirect(url_for('login'))
+    
+    vehicle = Vehicle.query.get_or_404(vehicle_id)
+    
+    # Check if user owns this vehicle
+    if vehicle.user_id != session['user_id']:
+        flash('You do not have permission to delete this vehicle', 'danger')
+        return redirect(url_for('profile'))
+    
+    # Check if vehicle is used in any active bookings
+    active_bookings = Booking.query.filter_by(vehicle_id=vehicle.id, is_active=True).first()
+    if active_bookings:
+        flash('This vehicle cannot be deleted as it has active bookings', 'danger')
+        return redirect(url_for('profile'))
+    
+    db.session.delete(vehicle)
+    db.session.commit()
+    
+    flash('Vehicle deleted successfully', 'success')
+    return redirect(url_for('profile'))
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -302,12 +596,42 @@ def get_spaces():
 
 @app.route('/book', methods=['GET', 'POST'])
 def book_space():
+    # Get user information if logged in
+    user = None
+    user_vehicles = []
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+        if user:
+            user_vehicles = Vehicle.query.filter_by(user_id=user.id).all()
+    
     if request.method == 'POST':
         selection_mode = request.form.get('selection_mode', 'manual')
         user_name = request.form.get('user_name')
         user_email = request.form.get('user_email')
         license_plate = request.form.get('license_plate')
         duration_hours = int(request.form.get('duration', 1))
+        
+        # Check if adding a new vehicle
+        new_license_plate = request.form.get('new_license_plate')
+        if license_plate == 'new' and new_license_plate:
+            license_plate = new_license_plate
+            
+            # Add the new vehicle to the user's account if logged in
+            if user:
+                vehicle_make = request.form.get('vehicle_make')
+                vehicle_model = request.form.get('vehicle_model')
+                vehicle_color = request.form.get('vehicle_color')
+                
+                new_vehicle = Vehicle(
+                    license_plate=license_plate,
+                    make=vehicle_make,
+                    model=vehicle_model,
+                    color=vehicle_color,
+                    user_id=user.id
+                )
+                db.session.add(new_vehicle)
+                db.session.commit()
+                flash(f'New vehicle {license_plate} added to your account', 'success')
         
         # Validate input
         if not all([user_name, user_email, license_plate]):
@@ -393,15 +717,14 @@ def book_space():
             selection_method='Auto' if selection_mode == 'auto' else 'Manual'
         )
         
-        # Mark booking as paid directly (bypassing payment)
-        booking.payment_status = 'Paid'
-        booking.is_active = True
+        # Booking is not active until payment is completed
+        booking.is_active = False
         
         db.session.add(booking)
         db.session.commit()
         
-        # Redirect directly to booking confirmation
-        return redirect(url_for('booking_confirmation', booking_id=booking.id))
+        # Redirect directly to payment page
+        return redirect(url_for('payment.checkout', booking_id=booking.id))
         
     # GET request - show booking form with available spaces
     spaces = []
@@ -414,21 +737,41 @@ def book_space():
                 'hourly_rate': status.get('hourly_rate', 150.00)  # Default rate in INR
             })
     
-    # Get user info if logged in
+    # Get user information if logged in
     user = None
-    vehicles = []
+    user_vehicles = []
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
-        vehicles = Vehicle.query.filter_by(user_id=user.id).all()
+        if user:
+            user_vehicles = Vehicle.query.filter_by(user_id=user.id).all()
     
-    return render_template('booking.html', spaces=spaces, user=user, vehicles=vehicles)
+    return render_template('booking.html', spaces=spaces, user=user, user_vehicles=user_vehicles)
 
 @app.route('/bookings')
 def view_bookings():
     """View all active bookings"""
+    # Get current time
+    current_time = datetime.now()
+    
     # If user is logged in, show only their bookings
     if 'user_id' in session:
-        bookings = Booking.query.filter_by(user_id=session['user_id'], is_active=True).all()
+        # Get active bookings
+        active_bookings = Booking.query.filter_by(
+            user_id=session['user_id'], 
+            is_active=True
+        ).all()
+        
+        # Get recently expired bookings (within the last 24 hours)
+        expired_time = current_time - timedelta(hours=24)
+        expired_bookings = Booking.query.filter(
+            Booking.user_id == session['user_id'],
+            Booking.is_active == True,
+            Booking.end_time < current_time,
+            Booking.end_time > expired_time
+        ).all()
+        
+        # Combine both lists
+        bookings = active_bookings + expired_bookings
     else:
         # For demo purposes, show all bookings if not logged in
         bookings = Booking.query.filter_by(is_active=True).all()
@@ -517,7 +860,8 @@ def admin_dashboard():
     
     # Get statistics
     total_spaces = ParkingSpace.query.count()
-    active_bookings = Booking.query.filter_by(is_active=True).count()
+    active_bookings = Booking.query.filter_by(is_active=True, payment_status='Paid').count()
+    pending_payments = Booking.query.filter_by(payment_status='Pending').count()
     total_users = User.query.count()
     total_revenue = db.session.query(db.func.sum(Payment.amount)).filter_by(status='Completed').scalar() or 0
     
@@ -525,15 +869,24 @@ def admin_dashboard():
     recent_bookings = Booking.query.order_by(Booking.created_at.desc()).limit(10).all()
     
     # Get space utilization by zone
-    space_by_zone = db.session.query(
+    space_by_zone_query = db.session.query(
         ParkingSpace.zone, 
         db.func.count(ParkingSpace.id)
     ).group_by(ParkingSpace.zone).all()
+    
+    # Convert Row objects to a dictionary for JSON serialization
+    space_by_zone = []
+    for zone, count in space_by_zone_query:
+        space_by_zone.append({
+            'zone': zone,
+            'count': count
+        })
     
     return render_template(
         'admin/dashboard.html', 
         total_spaces=total_spaces,
         active_bookings=active_bookings,
+        pending_payments=pending_payments,
         total_users=total_users,
         total_revenue=total_revenue,
         recent_bookings=recent_bookings,

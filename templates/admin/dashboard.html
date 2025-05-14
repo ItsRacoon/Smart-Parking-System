@@ -49,6 +49,9 @@
 .stats-card.yellow {
     background: linear-gradient(45deg, #f6c23e, #dda20a);
 }
+.stats-card.orange {
+    background: linear-gradient(45deg, #fd7e14, #cc6000);
+}
 .stats-card.red {
     background: linear-gradient(45deg, #e74a3b, #be2617);
 }
@@ -87,28 +90,35 @@
     
     <!-- Stats Cards -->
     <div class="row">
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl-3 col-md-6 mb-4">
             <div class="stats-card blue position-relative">
                 <i class="bi bi-p-square stats-icon"></i>
                 <h3>{{ total_spaces }}</h3>
                 <p>Total Parking Spaces</p>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl-3 col-md-6 mb-4">
             <div class="stats-card green position-relative">
                 <i class="bi bi-calendar-check stats-icon"></i>
                 <h3>{{ active_bookings }}</h3>
-                <p>Active Bookings</p>
+                <p>Confirmed Bookings</p>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="stats-card orange position-relative">
+                <i class="bi bi-credit-card stats-icon"></i>
+                <h3>{{ pending_payments }}</h3>
+                <p>Pending Payments</p>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
             <div class="stats-card yellow position-relative">
                 <i class="bi bi-people stats-icon"></i>
                 <h3>{{ total_users }}</h3>
                 <p>Registered Users</p>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl-3 col-md-6 mb-4">
             <div class="stats-card red position-relative">
                 <i class="bi bi-currency-rupee stats-icon"></i>
                 <h3>{{ total_revenue|currency }}</h3>
@@ -198,15 +208,19 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // Initialize chart data from server
+    const chartData = JSON.parse('{{ space_by_zone|default([])|tojson|safe }}');
+    
     document.addEventListener('DOMContentLoaded', function() {
         // Zone utilization chart
         const zoneCtx = document.getElementById('zoneChart').getContext('2d');
+        
         const zoneChart = new Chart(zoneCtx, {
             type: 'pie',
             data: {
-                labels: [{% for zone in space_by_zone %}'{{ zone[0] }}',{% endfor %}],
+                labels: chartData.map(zone => zone.zone),
                 datasets: [{
-                    data: [{% for zone in space_by_zone %}{{ zone[1] }},{% endfor %}],
+                    data: chartData.map(zone => zone.count),
                     backgroundColor: [
                         'rgba(78, 115, 223, 0.8)',
                         'rgba(28, 200, 138, 0.8)',

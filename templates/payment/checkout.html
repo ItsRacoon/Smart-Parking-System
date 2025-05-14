@@ -43,50 +43,21 @@
                         </div>
                     </div>
 
-                    <form method="post" action="{{ url_for('payment.checkout', booking_id=booking.id) }}">
-                        <h5 class="mb-3">Payment Method</h5>
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="payment_method" id="creditCard" value="Credit Card" checked>
-                                <label class="form-check-label" for="creditCard">
-                                    Credit Card
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="payment_method" id="debitCard" value="Debit Card">
-                                <label class="form-check-label" for="debitCard">
-                                    Debit Card
-                                </label>
-                            </div>
+                    <div class="text-center mb-4">
+                        <h5>Pay with Razorpay</h5>
+                        <p class="text-muted">Secure payment powered by Razorpay</p>
+                        <div class="d-grid gap-2 col-md-6 mx-auto">
+                            <button id="rzp-button" class="btn btn-primary btn-lg">
+                                <i class="bi bi-credit-card me-2"></i> Pay {{ booking.total_price|currency }}
+                            </button>
                         </div>
+                    </div>
 
-                        <div id="cardDetails">
-                            <div class="mb-3">
-                                <label for="cardNumber" class="form-label">Card Number</label>
-                                <input type="text" class="form-control" id="cardNumber" name="card_number" placeholder="1234 5678 9012 3456">
-                                <div class="form-text">For demo purposes, any valid-looking card number will work</div>
-                            </div>
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="expiryDate" class="form-label">Expiry Date</label>
-                                    <input type="text" class="form-control" id="expiryDate" placeholder="MM/YY">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="cvv" class="form-label">CVV</label>
-                                    <input type="text" class="form-control" id="cvv" placeholder="123">
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="cardName" class="form-label">Name on Card</label>
-                                <input type="text" class="form-control" id="cardName" name="card_name" placeholder="John Doe">
-                            </div>
-                        </div>
-
-                        <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg">Pay {{ booking.total_price|currency }}</button>
-                            <a href="{{ url_for('book_space') }}" class="btn btn-outline-secondary">Cancel</a>
-                        </div>
-                    </form>
+                    <div class="text-center">
+                        <a href="{{ url_for('booking_details', reference=booking.booking_reference) }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Booking
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -95,20 +66,56 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
-    // Simple form validation
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
-        
-        if (paymentMethod === 'Credit Card' || paymentMethod === 'Debit Card') {
-            const cardNumber = document.getElementById('cardNumber').value;
-            const cardName = document.getElementById('cardName').value;
-            
-            if (!cardNumber || !cardName) {
-                e.preventDefault();
-                alert('Please fill in all required card details');
+    document.addEventListener('DOMContentLoaded', function() {
+        const options = {
+            key: "{{ razorpay_key_id }}",
+            amount: "{{ order.amount }}",
+            currency: "{{ order.currency }}",
+            name: "Smart Parking System",
+            description: "Booking #{{ booking.booking_reference }}",
+            order_id: "{{ order.id }}",
+            handler: function(response) {
+                // Create a form to submit the payment details
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{{ callback_url }}";
+                
+                // Add payment details as hidden fields
+                const fields = {
+                    'razorpay_payment_id': response.razorpay_payment_id,
+                    'razorpay_order_id': response.razorpay_order_id,
+                    'razorpay_signature': response.razorpay_signature
+                };
+                
+                for (const key in fields) {
+                    const hiddenField = document.createElement('input');
+                    hiddenField.type = 'hidden';
+                    hiddenField.name = key;
+                    hiddenField.value = fields[key];
+                    form.appendChild(hiddenField);
+                }
+                
+                document.body.appendChild(form);
+                form.submit();
+            },
+            prefill: {
+                name: "{{ user.first_name + ' ' + user.last_name if user else booking.user_name }}",
+                email: "{{ user.email if user else booking.user_email }}",
+                contact: "{{ user.phone if user else '' }}"
+            },
+            theme: {
+                color: "#0d6efd"
             }
-        }
+        };
+        
+        const rzp = new Razorpay(options);
+        
+        document.getElementById('rzp-button').onclick = function(e) {
+            rzp.open();
+            e.preventDefault();
+        };
     });
 </script>
 {% endblock %}

@@ -115,18 +115,60 @@
                 
                 <div class="mb-3">
                     <label for="user_name" class="form-label">Your Name</label>
-                    <input type="text" class="form-control" id="user_name" name="user_name" required>
+                    <input type="text" class="form-control" id="user_name" name="user_name" value="{{ user.first_name + ' ' + user.last_name if user else '' }}" required>
                 </div>
                 
                 <div class="mb-3">
                     <label for="user_email" class="form-label">Email Address</label>
-                    <input type="email" class="form-control" id="user_email" name="user_email" required>
+                    <input type="email" class="form-control" id="user_email" name="user_email" value="{{ user.email if user else '' }}" required>
                 </div>
                 
                 <div class="mb-3">
                     <label for="license_plate" class="form-label">License Plate Number</label>
-                    <input type="text" class="form-control" id="license_plate" name="license_plate" required>
+                    {% if user and user_vehicles %}
+                        <select class="form-select" id="license_plate" name="license_plate" required>
+                            <option value="">-- Select your vehicle --</option>
+                            {% for vehicle in user_vehicles %}
+                                <option value="{{ vehicle.license_plate }}">{{ vehicle.license_plate }} ({{ vehicle.make }} {{ vehicle.model }}, {{ vehicle.color }})</option>
+                            {% endfor %}
+                            <option value="new">+ Add a new vehicle</option>
+                        </select>
+                        <div id="new_vehicle_form" style="display: none; margin-top: 10px;">
+                            <div class="card p-3">
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <label for="new_license_plate" class="form-label">License Plate</label>
+                                        <input type="text" class="form-control" id="new_license_plate" name="new_license_plate">
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label for="vehicle_color" class="form-label">Color</label>
+                                        <input type="text" class="form-control" id="vehicle_color" name="vehicle_color">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <label for="vehicle_make" class="form-label">Make</label>
+                                        <input type="text" class="form-control" id="vehicle_make" name="vehicle_make">
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label for="vehicle_model" class="form-label">Model</label>
+                                        <input type="text" class="form-control" id="vehicle_model" name="vehicle_model">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <input type="text" class="form-control" id="license_plate" name="license_plate" required>
+                    {% endif %}
                 </div>
+                
+                {% if not user %}
+                <div class="mb-3">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> <a href="{{ url_for('login') }}">Login</a> or <a href="{{ url_for('register') }}">Register</a> to save your details for future bookings.
+                    </div>
+                </div>
+                {% endif %}
                 
                 <div class="mb-3">
                     <label for="duration" class="form-label">Duration (hours)</label>
@@ -166,6 +208,28 @@
             const spaceIdSelect = document.getElementById('space_id');
             const durationSelect = document.getElementById('duration');
             const priceEstimateDiv = document.getElementById('price-estimate');
+            
+            // Vehicle selection handling
+            const licenseSelect = document.getElementById('license_plate');
+            const newVehicleForm = document.getElementById('new_vehicle_form');
+            
+            if (licenseSelect && newVehicleForm) {
+                licenseSelect.addEventListener('change', function() {
+                    if (this.value === 'new') {
+                        newVehicleForm.style.display = 'block';
+                        document.getElementById('new_license_plate').setAttribute('required', 'required');
+                        document.getElementById('vehicle_make').setAttribute('required', 'required');
+                        document.getElementById('vehicle_model').setAttribute('required', 'required');
+                        document.getElementById('vehicle_color').setAttribute('required', 'required');
+                    } else {
+                        newVehicleForm.style.display = 'none';
+                        document.getElementById('new_license_plate').removeAttribute('required');
+                        document.getElementById('vehicle_make').removeAttribute('required');
+                        document.getElementById('vehicle_model').removeAttribute('required');
+                        document.getElementById('vehicle_color').removeAttribute('required');
+                    }
+                });
+            }
             
             function updateSelectionMode() {
                 if (autoSelect.checked) {

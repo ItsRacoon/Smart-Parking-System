@@ -95,14 +95,28 @@
                                 <td>{{ booking.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
                                 <td>{{ booking.end_time.strftime('%Y-%m-%d %H:%M') }}</td>
                                 <td>
-                                    <span class="badge bg-success">Confirmed</span>
+                                    {% if booking.payment_status == 'Paid' and booking.is_active %}
+                                        {% if booking.end_time < now() %}
+                                            <span class="badge bg-danger">Expired</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Confirmed</span>
+                                        {% endif %}
+                                    {% elif booking.payment_status == 'Pending' %}
+                                        <span class="badge bg-warning">Payment Required</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <div class="booking-actions">
                                         <a href="{{ url_for('booking_details', reference=booking.booking_reference) }}" class="btn btn-sm btn-outline-primary">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        <!-- Payment button removed -->
+                                        {% if booking.payment_status == 'Pending' and booking.is_active %}
+                                            <a href="{{ url_for('payment.checkout', booking_id=booking.id) }}" class="btn btn-sm btn-outline-success">
+                                                <i class="bi bi-credit-card"></i>
+                                            </a>
+                                        {% endif %}
                                         <form method="POST" action="{{ url_for('cancel_booking', booking_id=booking.id) }}" onsubmit="return confirm('Are you sure you want to cancel this booking?');" class="d-inline">
                                             <button type="submit" class="btn btn-sm btn-outline-danger">
                                                 <i class="bi bi-x-circle"></i>
@@ -123,7 +137,17 @@
                 <div class="booking-card card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">{{ booking.parking_space.space_id }}</h5>
-                        <span class="badge bg-success booking-status">Confirmed</span>
+                        {% if booking.payment_status == 'Paid' and booking.is_active %}
+                            {% if booking.end_time < now() %}
+                                <span class="badge bg-danger booking-status">Expired</span>
+                            {% else %}
+                                <span class="badge bg-success booking-status">Confirmed</span>
+                            {% endif %}
+                        {% elif booking.payment_status == 'Pending' %}
+                            <span class="badge bg-warning booking-status">Payment Required</span>
+                        {% else %}
+                            <span class="badge bg-secondary booking-status">Inactive</span>
+                        {% endif %}
                     </div>
                     <div class="card-body">
                         <p><strong>Reference:</strong> {{ booking.booking_reference }}</p>
@@ -134,7 +158,11 @@
                             <a href="{{ url_for('booking_details', reference=booking.booking_reference) }}" class="btn btn-outline-primary">
                                 <i class="bi bi-eye"></i> Details
                             </a>
-                            <!-- Payment button removed -->
+                            {% if booking.payment_status == 'Pending' and booking.is_active %}
+                                <a href="{{ url_for('payment.checkout', booking_id=booking.id) }}" class="btn btn-outline-success">
+                                    <i class="bi bi-credit-card"></i> Pay Now
+                                </a>
+                            {% endif %}
                             <form method="POST" action="{{ url_for('cancel_booking', booking_id=booking.id) }}" onsubmit="return confirm('Are you sure you want to cancel this booking?');" class="d-inline">
                                 <button type="submit" class="btn btn-outline-danger">
                                     <i class="bi bi-x-circle"></i> Cancel

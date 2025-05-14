@@ -7,13 +7,19 @@
     <div class="row">
         <div class="col-md-8 mx-auto">
             <div class="card shadow">
-                <div class="card-header bg-success text-white">
-                    <h3 class="mb-0">Booking Confirmation</h3>
+                <div class="card-header {% if booking.payment_status == 'Paid' %}bg-success{% else %}bg-warning{% endif %} text-white">
+                    <h3 class="mb-0">{% if booking.payment_status == 'Paid' %}Booking Confirmation{% else %}Booking Created - Payment Required{% endif %}</h3>
                 </div>
                 <div class="card-body">
                     <div class="text-center mb-4">
-                        <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
-                        <h4 class="mt-3">Booking Confirmed!</h4>
+                        {% if booking.payment_status == 'Paid' %}
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                            <h4 class="mt-3">Booking Confirmed!</h4>
+                        {% else %}
+                            <i class="bi bi-exclamation-circle-fill text-warning" style="font-size: 4rem;"></i>
+                            <h4 class="mt-3">Payment Required</h4>
+                            <p class="text-danger">Your booking is not confirmed until payment is completed.</p>
+                        {% endif %}
                         <p class="text-muted">Reference: {{ booking.booking_reference }}</p>
                     </div>
                     
@@ -59,14 +65,28 @@
                     </div>
                     
                     <div class="mb-4">
-                        <div class="alert alert-info">
-                            <h5 class="alert-heading">Instructions:</h5>
-                            <p>Please arrive at the parking space at or after your booking start time. Your vehicle license plate has been registered in our system.</p>
-                            <p class="mb-0">You can view or manage this booking at any time by logging into your account or using the booking reference.</p>
-                        </div>
+                        {% if booking.payment_status == 'Pending' %}
+                            <div class="alert alert-warning">
+                                <h5 class="alert-heading">Payment Required:</h5>
+                                <p><strong>Your booking is not confirmed until payment is completed.</strong></p>
+                                <p>Please complete the payment to confirm your booking. The parking space will not be reserved until payment is received.</p>
+                                <p class="mb-0">Click the "Pay Now" button below to proceed with payment.</p>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <h5 class="alert-heading">Instructions:</h5>
+                                <p>Please arrive at the parking space at or after your booking start time. Your vehicle license plate has been registered in our system.</p>
+                                <p class="mb-0">You can view or manage this booking at any time by logging into your account or using the booking reference.</p>
+                            </div>
+                        {% endif %}
                     </div>
                     
                     <div class="d-grid gap-2 mt-4">
+                        {% if booking.payment_status == 'Pending' %}
+                            <a href="{{ url_for('payment.checkout', booking_id=booking.id) }}" class="btn btn-success">
+                                <i class="bi bi-credit-card"></i> Pay Now
+                            </a>
+                        {% endif %}
                         <a href="{{ url_for('view_bookings') }}" class="btn btn-primary">View All Bookings</a>
                         <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Return to Home</a>
                     </div>

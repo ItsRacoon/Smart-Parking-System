@@ -76,10 +76,13 @@ class Payment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     booking_id = db.Column(db.Integer, db.ForeignKey('booking.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    payment_method = db.Column(db.String(50), nullable=False)  # 'Credit Card', 'PayPal', etc.
-    transaction_id = db.Column(db.String(100), nullable=True)
+    payment_method = db.Column(db.String(50), nullable=False)  # 'Razorpay', 'Credit Card', 'PayPal', etc.
+    transaction_id = db.Column(db.String(100), nullable=True)  # Razorpay order ID
+    payment_id = db.Column(db.String(100), nullable=True)  # Razorpay payment ID
     status = db.Column(db.String(20), default='Pending')  # 'Pending', 'Completed', 'Failed', 'Refunded'
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    payment_date = db.Column(db.DateTime, nullable=True)  # When payment was completed
+    currency = db.Column(db.String(3), default='INR')
+    payment_data = db.Column(db.Text, nullable=True)  # JSON data from payment gateway
     booking = db.relationship('Booking', backref='payments')
     
     def __repr__(self):

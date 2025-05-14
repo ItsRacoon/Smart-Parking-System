@@ -122,8 +122,14 @@
                         <td>{{ booking.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>{{ booking.end_time.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>
-                            {% if booking.is_active %}
-                                <span class="badge bg-success status-badge">Active</span>
+                            {% if booking.payment_status == 'Paid' and booking.is_active %}
+                                {% if booking.end_time < now() %}
+                                    <span class="badge bg-danger status-badge">Expired</span>
+                                {% else %}
+                                    <span class="badge bg-success status-badge">Confirmed</span>
+                                {% endif %}
+                            {% elif booking.payment_status == 'Pending' %}
+                                <span class="badge bg-warning text-dark status-badge">Pending Payment</span>
                             {% else %}
                                 <span class="badge bg-secondary status-badge">Inactive</span>
                             {% endif %}
