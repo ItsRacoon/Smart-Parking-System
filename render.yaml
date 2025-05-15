@@ -2,6 +2,7 @@ services:
   - type: web
     name: smart-parking-system
     env: python
+    rootDir: .
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:

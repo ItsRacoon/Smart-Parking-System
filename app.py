@@ -23,6 +23,9 @@ load_dotenv()
 
 app = Flask(__name__)
 
+# Import mail service (must be after app is created)
+from mail_service import init_mail
+
 # Define now() function for templates
 @app.template_filter('now')
 def now():
@@ -56,6 +59,9 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Initialize database
 db.init_app(app)
+
+# Initialize mail service
+init_mail(app)
 
 # Custom template filters
 @app.template_filter('format_date')

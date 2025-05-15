@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
 from models import db, Booking, Payment, User
 from datetime import datetime
 import razorpay
@@ -8,6 +8,7 @@ import hmac
 import hashlib
 import uuid
 from dotenv import load_dotenv
+from mail_service import send_booking_confirmation
 
 # Load environment variables from .env file
 load_dotenv()
@@ -148,7 +149,16 @@ def verify_payment():
         
         db.session.commit()
         
-        flash('Payment successful!', 'success')
+        # Send confirmation email with QR code
+        try:
+            email_sent = send_booking_confirmation(booking.id)
+            if email_sent:
+                flash('Payment successful! A confirmation email with your ticket has been sent.', 'success')
+            else:
+                flash('Payment successful! However, there was an issue sending the confirmation email.', 'warning')
+        except Exception as e:
+            current_app.logger.error(f"Error sending confirmation email: {str(e)}")
+            flash('Payment successful! However, there was an issue sending the confirmation email.', 'warning')
         
         # Redirect to receipt page
         return redirect(url_for('payment.receipt', booking_id=booking.id))
@@ -217,6 +227,16 @@ def webhook():
                 
                 # Log the webhook activation
                 print(f"Webhook: Booking {booking.booking_reference} activated after payment {payment_id}")
+                
+                # Send confirmation email with QR code
+                try:
+                    email_sent = send_booking_confirmation(booking.id)
+                    if email_sent:
+                        print(f"Webhook: Confirmation email sent for booking {booking.booking_reference}")
+                    else:
+                        print(f"Webhook: Failed to send confirmation email for booking {booking.booking_reference}")
+                except Exception as e:
+                    print(f"Webhook: Error sending confirmation email: {str(e)}")
             except Exception as e:
                 print(f"Error updating booking status in webhook: {str(e)}")
             
