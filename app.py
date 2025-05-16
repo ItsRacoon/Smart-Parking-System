@@ -165,7 +165,7 @@ with app.app_context():
     spaces_count = ParkingSpace.query.count()
     if spaces_count == 0:
         try:
-            with open('CarParkPos', 'rb') as f:
+            with open('carParkPos', 'rb') as f:
                 posList = pickle.load(f)
             
             # Create different zones with different rates (in INR)
@@ -207,7 +207,7 @@ with app.app_context():
 # Initialize video capture
 try:
     cap = cv2.VideoCapture('carPark.mp4')
-    with open('CarParkPos', 'rb') as f:
+    with open('carParkPos', 'rb') as f:
         posList = pickle.load(f)
 except Exception as e:
     print(f"Error initializing video: {str(e)}")
