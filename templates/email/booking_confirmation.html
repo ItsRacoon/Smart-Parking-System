@@ -1,14 +1,14 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Smart Parking Booking Confirmation</title>
-    <style>
+    <style type="text/css">
         body {
             font-family: Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #333333;
             margin: 0;
             padding: 0;
         }
@@ -32,7 +32,7 @@
             border-radius: 5px;
             padding: 15px;
             margin-bottom: 20px;
-            border: 1px solid #ddd;
+            border: 1px solid #dddddd;
         }
         .qr-code {
             text-align: center;
@@ -41,12 +41,13 @@
         .qr-code img {
             max-width: 200px;
             height: auto;
+            display: inline-block;
         }
         .footer {
             text-align: center;
             padding: 20px;
             font-size: 12px;
-            color: #777;
+            color: #777777;
         }
         table {
             width: 100%;
@@ -54,7 +55,7 @@
         }
         table td {
             padding: 8px;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #eeeeee;
         }
         table td:first-child {
             font-weight: bold;
@@ -71,11 +72,11 @@
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Smart Parking</h1>
-            <h2>Booking Confirmation</h2>
+<body style="margin: 0; padding: 0;">
+    <div class="container" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div class="header" style="background-color: #4CAF50; color: white; padding: 20px; text-align: center;">
+            <h1 style="margin: 0; padding: 0;">Smart Parking</h1>
+            <h2 style="margin-top: 10px;">Booking Confirmation</h2>
         </div>
         
         <div class="content">
@@ -116,7 +117,22 @@
             <div class="qr-code">
                 <h3>Your Parking Ticket</h3>
                 <p>Please scan this QR code when you arrive at the parking lot.</p>
-                <img src="data:image/png;base64,{{ qr_code }}" alt="Booking QR Code">
+                {% if qr_code %}
+                <!-- Using a table for better email client compatibility -->
+                <table align="center" border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td style="text-align: center;">
+                            <img src="data:image/png;base64,{{ qr_code }}" 
+                                 alt="Booking QR Code" 
+                                 width="200" 
+                                 height="200" 
+                                 style="display: block; width: 200px; height: 200px;">
+                        </td>
+                    </tr>
+                </table>
+                {% else %}
+                <p style="color: red;">QR code not available. Please use your booking reference instead.</p>
+                {% endif %}
                 <p><strong>Booking Reference: {{ booking.booking_reference }}</strong></p>
             </div>
             

@@ -13,6 +13,27 @@ mail_service = Blueprint('mail_service', __name__)
 # Initialize Mail
 mail = Mail()
 
+# Add a route to test QR code generation
+@mail_service.route('/test_qr_code')
+def test_qr_code():
+    try:
+        test_data = "TEST-QR-CODE-123"
+        qr_code = generate_qr_code(test_data)
+        if qr_code:
+            return f"""
+            <html>
+            <body>
+                <h1>QR Code Test</h1>
+                <p>QR code generated successfully!</p>
+                <img src="data:image/png;base64,{qr_code}" width="200" height="200">
+            </body>
+            </html>
+            """
+        else:
+            return "Failed to generate QR code", 500
+    except Exception as e:
+        return f"Error: {str(e)}", 500
+
 def init_mail(app):
     """Initialize the mail extension with the Flask app"""
     # Configure Flask-Mail
@@ -35,24 +56,37 @@ def init_mail(app):
 
 def generate_qr_code(data):
     """Generate a QR code as a base64 encoded image"""
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data(data)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    
-    # Save QR code to BytesIO object
-    buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    
-    # Encode as base64 string
-    qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-    return qr_base64
+    try:
+        # Use the simpler qrcode.make approach which handles PIL internally
+        import qrcode
+        from PIL import Image
+        
+        # Create QR code directly
+        img = qrcode.make(data)
+        
+        # Save QR code to BytesIO object
+        buffer = BytesIO()
+        img.save(buffer, format="PNG")
+        buffer.seek(0)
+        
+        # Encode as base64 string
+        qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        
+        # Log success
+        current_app.logger.info(f"QR code generated successfully, length: {len(qr_base64)}")
+        
+        # Verify the base64 string is not empty
+        if not qr_base64:
+            current_app.logger.error("Generated QR code base64 string is empty")
+            return ""
+            
+        return qr_base64
+    except ImportError as e:
+        current_app.logger.error(f"Missing required library: {str(e)}")
+        return ""
+    except Exception as e:
+        current_app.logger.error(f"Error generating QR code: {str(e)}")
+        return ""
 
 def send_booking_confirmation(booking_id):
     """Send booking confirmation email with QR code"""
@@ -69,20 +103,21 @@ def send_booking_confirmation(booking_id):
             current_app.logger.error(f"Parking space {booking.parking_space_id} not found")
             return False
         
-        # Generate QR code with booking reference
-        qr_data = {
-            'booking_reference': booking.booking_reference,
-            'space_id': parking_space.space_id,
-            'license_plate': booking.license_plate,
-            'start_time': booking.start_time.isoformat(),
-            'end_time': booking.end_time.isoformat()
-        }
+        # Use a simpler approach for QR code data - just the booking reference
+        # This is more likely to work reliably in all email clients
+        qr_data_str = f"SMART-PARKING-BOOKING:{booking.booking_reference}"
         
-        # Convert to string for QR code
-        qr_data_str = str(qr_data)
+        current_app.logger.info(f"Generating QR code for booking {booking.booking_reference}")
         
         # Generate QR code
         qr_code = generate_qr_code(qr_data_str)
+        
+        # Log the result
+        if qr_code:
+            current_app.logger.info(f"QR code generated successfully for booking {booking.booking_reference}")
+        else:
+            current_app.logger.error(f"Failed to generate QR code for booking {booking.booking_reference}")
+            # Continue without QR code
         
         # Create email message
         subject = f"Smart Parking Confirmation - Booking #{booking.booking_reference}"
